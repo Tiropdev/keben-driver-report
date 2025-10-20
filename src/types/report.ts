@@ -8,22 +8,24 @@ export interface DeliveryReport {
   purchaseCost: number;
   cess: number;
   allowance: number;
-  mileage: number;
+  fuelPerDay: number;
+  distance: number;
   amountPaid: number;
   timestamp: string;
 }
 
 export const MATERIAL_OPTIONS = [
-  "Ballast 1/2",
-  "Ballast 3/4",
-  "Quarry Sand",
-  "Quarry Dust",
-  "West Pokot Sand",
-  "River Sand",
-  "Machine Blocks 6x9",
-  "Machine Blocks 9x9",
-  "Foundation Stones",
-  "Hardcore",
-  "Murram",
-  "Quarry Waste",
+  "BALLAST 1/2",
+  "BALLAST 3/4",
+  "MIXED BALLAST",
+  "QUARRY SAND",
+  "QUARRY DUST",
+  "WEST POKOT SAND",
+  "RIVER SAND",
+  "MACHINE BLOCKS 6X9",
+  "MACHINE BLOCKS 9X9",
+  "FOUNDATION STONES",
+  "HARDCORE",
+  "MURRAM",
+  "QUARRY WASTE",
 ];

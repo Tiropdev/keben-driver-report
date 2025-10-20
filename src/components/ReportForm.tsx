@@ -23,10 +23,10 @@ const formSchema = z.object({
   to: z.string().trim().min(1, "Destination is required").max(100),
   purchaseCost: z.coerce.number().min(0, "Must be a positive number"),
   cess: z.coerce.number().min(0, "Must be a positive number"),
-  allowance: z.coerce.number().min(0, "Must be a positive number"),
+  allowance: z.coerce.number().min(0, "Must be a positive number").optional(),
   fuelPerDay: z.coerce.number().min(0, "Must be a positive number"),
-  mileage: z.coerce.number().min(0, "Must be a positive number"),
-  amountPaid: z.coerce.number().min(0, "Must be a positive number"),
+  distance: z.coerce.number().min(0, "Must be a positive number"),
+  amountPaid: z.coerce.number().min(0, "Must be a positive number").optional(),
   confirmed: z.boolean().refine((val) => val === true, "You must confirm the report accuracy"),
 });
 
@@ -59,18 +59,17 @@ export const ReportForm = () => {
       // Create report object
       const report = {
         id: `report_${Date.now()}`,
-        driverName: data.driverName,
-        truckNumber: data.truckNumber,
-        material: data.material,
-        from: data.from,
-        to: data.to,
+        driverName: data.driverName.toLocaleUpperCase(),
+        truckNumber: data.truckNumber.toLocaleUpperCase(),
+        material: data.material.toLocaleUpperCase(),
+        from: data.from.toLocaleUpperCase(),
+        to: data.to.toLocaleUpperCase(),
         purchaseCost: data.purchaseCost,
         cess: data.cess,
         allowance: data.allowance,  
         fuelPerDay: data.fuelPerDay,
-        mileage: data.mileage,
+        distance: data.distance,
         amountPaid: data.amountPaid,
-      
         timestamp: new Date().toISOString(),
       };
 
@@ -87,7 +86,7 @@ const { error } = await supabase.from("reports").insert([
     purchase_cost: data.purchaseCost,
     cess: data.cess,
     allowance: data.allowance,
-    mileage: data.mileage,
+    distance: data.distance,
     amount_paid: data.amountPaid,
     fuel_per_day: data.fuelPerDay, // ✅ add here
   },
@@ -134,7 +133,7 @@ if (error) {
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader className="bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-t-lg">
-        <CardTitle className="text-2xl">New Delivery Report</CardTitle>
+        <CardTitle className="text-2xl">NEW DELIVERY REPORT</CardTitle>
         <CardDescription className="text-primary-foreground/90">
           Fill in the delivery details below
         </CardDescription>
@@ -143,7 +142,7 @@ if (error) {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           {/* Driver Info */}
           <div className="space-y-2">
-            <Label htmlFor="driverName">Driver Name</Label>
+            <Label htmlFor="driverName">DRIVER NAME</Label>
             <Input
               id="driverName"
               placeholder="Enter driver name"
@@ -156,7 +155,7 @@ if (error) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="truckNumber">Truck Number</Label>
+            <Label htmlFor="truckNumber">TRUCK NUMBER</Label>
             <Input
               id="truckNumber"
               placeholder="e.g., KBN-001"
@@ -170,7 +169,7 @@ if (error) {
 
           {/* Material Selection */}
           <div className="space-y-2">
-            <Label htmlFor="material">Material</Label>
+            <Label htmlFor="material">MATERIAL</Label>
             <Select
               value={selectedMaterial}
               onValueChange={(value) => {
@@ -197,7 +196,7 @@ if (error) {
           {/* Locations */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="from">From</Label>
+              <Label htmlFor="from">FROM</Label>
               <Input
                 id="from"
                 placeholder="Origin location"
@@ -210,7 +209,7 @@ if (error) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="to">To</Label>
+              <Label htmlFor="to">TO</Label>
               <Input
                 id="to"
                 placeholder="Destination"
@@ -226,7 +225,7 @@ if (error) {
           {/* Financial Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="purchaseCost">Purchase Cost (KES)</Label>
+              <Label htmlFor="purchaseCost">PURCHASE COST (KES)</Label>
               <Input
                 id="purchaseCost"
                 type="number"
@@ -241,7 +240,7 @@ if (error) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cess">Cess (KES)</Label>
+              <Label htmlFor="cess">CESS (KES)</Label>
               <Input
                 id="cess"
                 type="number"
@@ -259,7 +258,7 @@ if (error) {
         {/* Allowance / Fuel per Day */}
 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
   <div className="space-y-2">
-    <Label htmlFor="allowance">Allowance (KES)</Label>
+    <Label htmlFor="allowance">ALLOWANCE (KES)</Label>
     <Input
       id="allowance"
       type="number"
@@ -272,7 +271,7 @@ if (error) {
   </div>
 
   <div className="space-y-2">
-    <Label htmlFor="fuelPerDay">Fuel per Day (Ltrs)</Label>
+    <Label htmlFor="fuelPerDay">FUEL PER DAY (LTRS)</Label>
     <Input
       id="fuelPerDay"
       type="number"
@@ -288,22 +287,22 @@ if (error) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="mileage">Mileage (km)</Label>
+              <Label htmlFor="distance">DISTANCE (KM)</Label>
               <Input
-                id="mileage"
+                id="distance"
                 type="number"
                 step="0.1"
                 placeholder="0.0"
-                {...register("mileage")}
+                {...register("distance")}
                 className="h-12"
               />
-              {errors.mileage && (
-                <p className="text-sm text-destructive">{errors.mileage.message}</p>
+              {errors.distance && (
+                <p className="text-sm text-destructive">{errors.distance.message}</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="amountPaid">Amount Paid by Customer (KES)</Label>
+              <Label htmlFor="amountPaid">AMOUNT PAID BY CUSTOMER (KES)</Label>
               <Input
                 id="amountPaid"
                 type="number"
