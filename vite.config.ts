@@ -5,6 +5,9 @@ import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig(({ mode }) => ({
+  // ✅ Added for Netlify relative paths
+  base: "./",
+
   server: {
     host: "::",
     port: 8080,
@@ -62,4 +65,3 @@ export default defineConfig(({ mode }) => ({
     },
   },
 }));
-
