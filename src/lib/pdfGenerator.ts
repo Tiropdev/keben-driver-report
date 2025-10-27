@@ -60,11 +60,6 @@ export const generatePDF = (report: DeliveryReport): Blob => {
   addField("Cess", `KES ${report.cess.toLocaleString()}`);
   addField("Allowance", `KES ${report.allowance.toLocaleString()}`);
   addField("Amount Paid by Customer", `KES ${report.amountPaid.toLocaleString()}`);
-  // Assuming in your ReportForm you saved it as fuelLitres or similar
-  addField("Fuel per Day", `${(report as any).fuelPerDay ?? 0} Ltrs`);
-
-
-
   
   // Signature section
   yPos += 20;

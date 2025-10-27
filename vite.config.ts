@@ -4,10 +4,8 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
+// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  // ✅ Added for Netlify relative paths
-  base: "./",
-
   server: {
     host: "::",
     port: 8080,
@@ -17,30 +15,24 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: [
-        "favicon.ico",
-        "web-app-manifest-192x192.png",
-        "web-app-manifest-512x512.png",
-      ],
+      includeAssets: ["favicon.ico"],
       manifest: {
         name: "Keben Driver Report",
         short_name: "Keben Report",
-        description:
-          "Offline-enabled delivery report management for Keben Hardware drivers",
+        description: "Delivery report management for Keben Hardware drivers",
         theme_color: "#2D5016",
         background_color: "#FAFAFA",
         display: "standalone",
-        orientation: "portrait",
         icons: [
           {
-            src: "/web-app-manifest-192x192.png",
+            src: "/placeholder.svg",
             sizes: "192x192",
-            type: "image/png",
+            type: "image/svg+xml",
           },
           {
-            src: "/web-app-manifest-512x512.png",
+            src: "/placeholder.svg",
             sizes: "512x512",
-            type: "image/png",
+            type: "image/svg+xml",
           },
         ],
       },
@@ -48,10 +40,10 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/gyqrhyjmilcogdggdnal\.supabase\.co\/.*/i,
+            urlPattern: /^https:\/\/api\.emailjs\.com\/.*/i,
             handler: "NetworkFirst",
             options: {
-              cacheName: "supabase-cache",
+              cacheName: "emailjs-cache",
               networkTimeoutSeconds: 10,
             },
           },

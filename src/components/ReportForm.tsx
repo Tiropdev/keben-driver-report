@@ -1,130 +1,167 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, Send } from "lucide-react";
-import { DeliveryReport, MATERIAL_OPTIONS } from "@/types/report";
+import { Loader2, Send, Trash2, PlusCircle } from "lucide-react";
 import { saveReport } from "@/lib/storage";
-import { generatePDF } from "@/lib/pdfGenerator";
-import { supabase } from "@/supabaseClient"; // ✅ new import
+
+// -------------------- MATERIALS --------------------
+const ALL_MATERIALS = [
+  "Ballast 1/2",
+  "Ballast 3/4",
+  "Mixed Ballast",
+  "Quarry Sand",
+  "Quarry Dust",
+  "West Pokot Sand",
+  "River Sand",
+  "Machine Blocks 6x9",
+  "Machine Blocks 9x9",
+  "Foundation Stones",
+  "Hardcore",
+  "Murram",
+  "Quarry Waste",
+];
+
+const getUnit = (material: string) => {
+  if (material === "Foundation Stones") return "ft";
+  if (material.includes("Machine Block")) return "pieces";
+  return "tons";
+};
+
+// -------------------- FORM SCHEMA --------------------
+const materialSchema = z.object({
+  name: z.string().min(1, "Select a material"),
+  amount: z.coerce.number().min(0.1, "Enter valid amount"),
+  unit: z.string(),
+});
 
 const formSchema = z.object({
   driverName: z.string().trim().min(1, "Driver name is required").max(100),
   truckNumber: z.string().trim().min(1, "Truck number is required").max(50),
-  material: z.string().min(1, "Please select a material"),
   from: z.string().trim().min(1, "Origin location is required").max(100),
   to: z.string().trim().min(1, "Destination is required").max(100),
-  purchaseCost: z.coerce.number().min(0, "Must be a positive number"),
-  cess: z.coerce.number().min(0, "Must be a positive number"),
-  allowance: z.coerce.number().min(0, "Must be a positive number").optional(),
-  fuelPerDay: z.coerce.number().min(0, "Must be a positive number"),
-  distance: z.coerce.number().min(0, "Must be a positive number"),
-  amountPaid: z.coerce.number().min(0, "Must be a positive number").optional(),
-  confirmed: z.boolean().refine((val) => val === true, "You must confirm the report accuracy"),
+  materials: z.array(materialSchema).min(1, "Add at least one material"),
+  purchaseCost: z.coerce.number().min(0, "Must be positive"),
+  cess: z.coerce.number().min(0, "Must be positive"),
+  allowance: z.coerce.number().min(0, "Must be positive"),
+  mileage: z.coerce.number().min(0, "Must be positive"),
+  amountPaid: z.coerce.number().min(0, "Must be positive"),
+  confirmed: z.boolean().refine((val) => val === true, "You must confirm accuracy"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
+// -------------------- REPORT FORM COMPONENT --------------------
 export const ReportForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedMaterial, setSelectedMaterial] = useState("");
 
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
     reset,
     setValue,
     watch,
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      confirmed: false,
-    },
+    defaultValues: { materials: [{ name: "", amount: 0, unit: "" }], confirmed: false },
   });
 
+  const { fields, append, remove } = useFieldArray({ control, name: "materials" });
   const confirmed = watch("confirmed");
+  const materials = watch("materials");
 
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
 
     try {
-      // Create report object
-      const report = {
+      const materialsArray = data.materials.map((m) => ({
+        name: m.name,
+        amount: m.amount,
+        unit: m.unit,
+      }));
+
+      // ✅ Local storage (camelCase)
+      const localReport = {
         id: `report_${Date.now()}`,
-        driverName: data.driverName.toLocaleUpperCase(),
-        truckNumber: data.truckNumber.toLocaleUpperCase(),
-        material: data.material.toLocaleUpperCase(),
-        from: data.from.toLocaleUpperCase(),
-        to: data.to.toLocaleUpperCase(),
+        driverName: data.driverName,
+        truckNumber: data.truckNumber,
+        from: data.from,
+        to: data.to,
         purchaseCost: data.purchaseCost,
         cess: data.cess,
-        allowance: data.allowance,  
-        fuelPerDay: data.fuelPerDay,
-        distance: data.distance,
+        allowance: data.allowance,
+        mileage: data.mileage,
         amountPaid: data.amountPaid,
+        materials: materialsArray,
+        material: materialsArray.map((m) => `${m.amount}${m.unit} ${m.name}`).join(", "),
         timestamp: new Date().toISOString(),
       };
 
-      // Save to local storage
-      saveReport(report);
-      // Save to Supabase
-const { error } = await supabase.from("reports").insert([
-  {
-    driver_name: data.driverName,
-    truck_number: data.truckNumber,
-    material: data.material,
-    from_location: data.from,
-    to_location: data.to,
-    purchase_cost: data.purchaseCost,
-    cess: data.cess,
-    allowance: data.allowance,
-    distance: data.distance,
-    amount_paid: data.amountPaid,
-    fuel_per_day: data.fuelPerDay, // ✅ add here
-  },
-]);
+      saveReport(localReport);
 
-if (error) {
-  console.error("Supabase insert error:", error);
-  toast.error("Failed to save report to Supabase", {
-    description: error.message,
-  });
-} else {
-  console.log("✅ Report saved to Supabase");
-}
+      // ✅ Supabase (snake_case)
+      const SUPABASE_URL = "https://gyqrhyjmilcogdggdnal.supabase.co";
+      const SUPABASE_KEY =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5cXJoeWptaWxjb2dkZ2dkbmFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3MzM4ODksImV4cCI6MjA3NjMwOTg4OX0.E9_z2ER7idyKDIL1u_XmxvdssfFa5QTaQ9iMs0aRcSk";
+
+const report = {
+  driver_name: data.driverName,
+  truck_number: data.truckNumber,
+  from_location: data.from,
+  to_location: data.to,
+  purchase_cost: data.purchaseCost,
+  cess: data.cess,
+  allowance: data.allowance,
+  distance: data.mileage, // ✅ rename from mileage → distance
+  amount_paid: data.amountPaid,
+  materials: materialsArray,
+  material: materialsArray.map((m) => `${m.amount}${m.unit} ${m.name}`).join(", "),
+  created_at: new Date().toISOString(), // ✅ replace timestamp with your actual Supabase column name
+};
 
 
-      // Generate PDF
-      const pdfBlob = generatePDF(report);
-      
-      toast.success("Report generated!", {
-        description: "The delivery report has been saved and will download.",
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/reports`, {
+        method: "POST",
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify(report),
       });
 
-      // Download PDF for driver
-      //const url = URL.createObjectURL(pdfBlob);
-      //const a = document.createElement("a");
-      //a.href = url;
-      //a.download = `Keben_Report_${data.truckNumber}_${Date.now()}.pdf`;
-      //a.click();
-      //URL.revokeObjectURL(url);
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Supabase insert failed: ${errText}`);
+      }
 
-      // Reset form
+      toast.success("✅ Report saved locally and synced to Supabase!");
       reset();
-      setSelectedMaterial("");
-    } catch (error) {
-      console.error("Submission error:", error);
-      toast.error("Failed to generate report", {
-        description: "Please try again or contact support.",
-      });
+    } catch (err: any) {
+      console.error(err);
+      toast.error("❌ Failed to save report: " + err.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -135,7 +172,7 @@ if (error) {
       <CardHeader className="bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-t-lg">
         <CardTitle className="text-2xl">NEW DELIVERY REPORT</CardTitle>
         <CardDescription className="text-primary-foreground/90">
-          Fill in the delivery details below
+          FILL IN THE DETAILS BELOW
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
@@ -143,212 +180,147 @@ if (error) {
           {/* Driver Info */}
           <div className="space-y-2">
             <Label htmlFor="driverName">DRIVER NAME</Label>
-            <Input
-              id="driverName"
-              placeholder="Enter driver name"
-              {...register("driverName")}
-              className="h-12"
-            />
-            {errors.driverName && (
-              <p className="text-sm text-destructive">{errors.driverName.message}</p>
-            )}
+            <Input id="driverName" placeholder="Enter your Name" {...register("driverName")} className="h-12" />
+            {errors.driverName && <p className="text-sm text-destructive">{errors.driverName.message}</p>}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="truckNumber">TRUCK NUMBER</Label>
-            <Input
-              id="truckNumber"
-              placeholder="e.g., KBN-001"
-              {...register("truckNumber")}
-              className="h-12"
-            />
-            {errors.truckNumber && (
-              <p className="text-sm text-destructive">{errors.truckNumber.message}</p>
-            )}
+            <Input id="truckNumber" placeholder="Eg. KBN 123E" {...register("truckNumber")} className="h-12" />
+            {errors.truckNumber && <p className="text-sm text-destructive">{errors.truckNumber.message}</p>}
           </div>
 
-          {/* Material Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="material">MATERIAL</Label>
-            <Select
-              value={selectedMaterial}
-              onValueChange={(value) => {
-                setSelectedMaterial(value);
-                setValue("material", value);
-              }}
+          {/* Materials Section */}
+          <div className="space-y-3">
+            <Label>MATERIALS</Label>
+            {fields.map((field, index) => (
+              <div
+                key={field.id}
+                className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end border p-3 rounded-lg relative"
+              >
+                <div className="space-y-1">
+                  <Label>MATERIAL</Label>
+                  <Select
+                    value={materials[index]?.name || ""}
+                    onValueChange={(val) => {
+                      setValue(`materials.${index}.name`, val);
+                      setValue(`materials.${index}.unit`, getUnit(val));
+                    }}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ALL_MATERIALS.map((m) => (
+                        <SelectItem key={m} value={m}>
+                          {m}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.materials?.[index]?.name && (
+                    <p className="text-sm text-destructive">
+                      {errors.materials[index]?.name?.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <Label>AMOUNT ({materials[index]?.unit || "-"})</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    {...register(`materials.${index}.amount` as const)}
+                    className="h-10"
+                  />
+                  {errors.materials?.[index]?.amount && (
+                    <p className="text-sm text-destructive">
+                      {errors.materials[index]?.amount?.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-end pt-5">
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    onClick={() => remove(index)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full flex items-center justify-center gap-2"
+              onClick={() => append({ name: "", amount: 0, unit: "" })}
             >
-              <SelectTrigger className="h-12">
-                <SelectValue placeholder="Select material type" />
-              </SelectTrigger>
-              <SelectContent>
-                {MATERIAL_OPTIONS.map((material) => (
-                  <SelectItem key={material} value={material}>
-                    {material}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.material && (
-              <p className="text-sm text-destructive">{errors.material.message}</p>
-            )}
+              <PlusCircle className="h-4 w-4" /> Add Material
+            </Button>
           </div>
 
           {/* Locations */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="from">FROM</Label>
-              <Input
-                id="from"
-                placeholder="Origin location"
-                {...register("from")}
-                className="h-12"
-              />
-              {errors.from && (
-                <p className="text-sm text-destructive">{errors.from.message}</p>
-              )}
+              <Label>FROM</Label>
+              <Input placeholder="Enter starting location" {...register("from")} className="h-12" />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="to">TO</Label>
-              <Input
-                id="to"
-                placeholder="Destination"
-                {...register("to")}
-                className="h-12"
-              />
-              {errors.to && (
-                <p className="text-sm text-destructive">{errors.to.message}</p>
-              )}
+              <Label>TO</Label>
+              <Input placeholder="Enter destination" {...register("to")} className="h-12" />
             </div>
           </div>
 
-          {/* Financial Details */}
+          {/* Financial */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="purchaseCost">PURCHASE COST (KES)</Label>
-              <Input
-                id="purchaseCost"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                {...register("purchaseCost")}
-                className="h-12"
-              />
-              {errors.purchaseCost && (
-                <p className="text-sm text-destructive">{errors.purchaseCost.message}</p>
-              )}
+              <Label>PURCHASE COST</Label>
+              <Input type="number" step="0.01" {...register("purchaseCost")} />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="cess">CESS (KES)</Label>
-              <Input
-                id="cess"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                {...register("cess")}
-                className="h-12"
-              />
-              {errors.cess && (
-                <p className="text-sm text-destructive">{errors.cess.message}</p>
-              )}
+              <Label>CESS</Label>
+              <Input type="number" step="0.01" {...register("cess")} />
             </div>
           </div>
 
-        {/* Allowance / Fuel per Day */}
-<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-  <div className="space-y-2">
-    <Label htmlFor="allowance">ALLOWANCE (KES)</Label>
-    <Input
-      id="allowance"
-      type="number"
-      step="0.01"
-      placeholder="0.00"
-      {...register("allowance")}
-      className="h-12"
-    />
-    {errors.allowance && <p className="text-sm text-destructive">{errors.allowance.message}</p>}
-  </div>
-
-  <div className="space-y-2">
-    <Label htmlFor="fuelPerDay">FUEL PER DAY (LTRS)</Label>
-    <Input
-      id="fuelPerDay"
-      type="number"
-      step="0.1"
-      placeholder="0.0"
-      {...register("fuelPerDay")}
-      className="h-12"
-    />
-    {errors.fuelPerDay && <p className="text-sm text-destructive">{errors.fuelPerDay.message}</p>}
-  </div>
-</div>
-
+          <div className="space-y-2">
+            <Label>ALLOWANCE</Label>
+            <Input type="number" step="0.01" {...register("allowance")} />
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="distance">DISTANCE (KM)</Label>
-              <Input
-                id="distance"
-                type="number"
-                step="0.1"
-                placeholder="0.0"
-                {...register("distance")}
-                className="h-12"
-              />
-              {errors.distance && (
-                <p className="text-sm text-destructive">{errors.distance.message}</p>
-              )}
+              <Label>DISTANCE (KM)</Label>
+              <Input type="number" step="0.1" {...register("mileage")} />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="amountPaid">AMOUNT PAID BY CUSTOMER (KES)</Label>
-              <Input
-                id="amountPaid"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                {...register("amountPaid")}
-                className="h-12"
-              />
-              {errors.amountPaid && (
-                <p className="text-sm text-destructive">{errors.amountPaid.message}</p>
-              )}
+              <Label>AMOUNT PAID BY CUSTOMER</Label>
+
+              <Input type="number" step="0.01" {...register("amountPaid")} />
             </div>
           </div>
+
           {/* Confirmation */}
           <div className="flex items-start space-x-3 pt-4">
             <Checkbox
-              id="confirmed"
               checked={confirmed}
-              onCheckedChange={(checked) => setValue("confirmed", checked as boolean)}
+              onCheckedChange={(c) => setValue("confirmed", c as boolean)}
             />
-            <Label
-              htmlFor="confirmed"
-              className="text-sm font-normal leading-relaxed cursor-pointer"
-            >
-              I confirm that the information provided in this report is accurate and complete
-            </Label>
+            <Label>I confirm the information is accurate</Label>
           </div>
-          {errors.confirmed && (
-            <p className="text-sm text-destructive">{errors.confirmed.message}</p>
-          )}
 
-          {/* Submit Button */}
-          <Button
-            type="submit"
-            className="w-full h-12 text-base"
-            disabled={isSubmitting}
-          >
+          <Button type="submit" className="w-full h-12 text-base" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Generating Report...
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Saving Report...
               </>
             ) : (
               <>
-                <Send className="mr-2 h-5 w-5" />
-                Generate Report
+                <Send className="mr-2 h-5 w-5" /> Save Report
               </>
             )}
           </Button>

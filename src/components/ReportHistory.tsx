@@ -26,17 +26,36 @@ export const ReportHistory = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p>
-                <strong>Material:</strong> {report.material}
-              </p>
+              {/* ✅ Handle multiple materials */}
+              {Array.isArray(report.materials) ? (
+                <div className="mb-2">
+                  <strong>Materials:</strong>
+                  <ul className="list-disc ml-6 mt-1">
+                    {report.materials.map((m, idx) => (
+                      <li key={idx}>
+                        {m.amount} {m.unit} {m.name}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p>
+                  <strong>Material:</strong> {report.material}
+                </p>
+              )}
+
               <p>
                 <strong>From:</strong> {report.from} → <strong>To:</strong> {report.to}
               </p>
               <p>
-                <strong>Amount Paid:</strong> KES {report.amountPaid.toLocaleString()}
+                <strong>Amount Paid:</strong> KES{" "}
+                {Number(report.amountPaid).toLocaleString()}
               </p>
               <p className="text-xs text-gray-500">
-                Saved on: {new Date(report.timestamp).toLocaleString()}
+                Saved on:{" "}
+                {report.timestamp
+                  ? new Date(report.timestamp).toLocaleString()
+                  : "N/A"}
               </p>
             </CardContent>
           </Card>

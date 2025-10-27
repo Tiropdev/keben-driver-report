@@ -1,31 +1,41 @@
+// ✅ Updated DeliveryReport type
 export interface DeliveryReport {
   id: string;
   driverName: string;
   truckNumber: string;
-  material: string;
-  from: string;
-  to: string;
+  from_location: string;
+  to_location: string;
   purchaseCost: number;
   cess: number;
   allowance: number;
-  fuelPerDay: number;
-  distance: number;
+  mileage: number;
   amountPaid: number;
   timestamp: string;
+
+  // ✅ Old single-material field (for legacy reports)
+  material?: string;
+
+  // ✅ New multiple materials field
+  materials?: {
+    name: string;
+    amount: number;
+    unit: string;
+  }[];
 }
 
+// ✅ Material options list remains the same
 export const MATERIAL_OPTIONS = [
-  "BALLAST 1/2",
-  "BALLAST 3/4",
-  "MIXED BALLAST",
-  "QUARRY SAND",
-  "QUARRY DUST",
-  "WEST POKOT SAND",
-  "RIVER SAND",
-  "MACHINE BLOCKS 6X9",
-  "MACHINE BLOCKS 9X9",
-  "FOUNDATION STONES",
-  "HARDCORE",
-  "MURRAM",
-  "QUARRY WASTE",
+  "Ballast 1/2",
+  "Ballast 3/4",
+  "Mixed Ballast",
+  "Quarry Sand",
+  "Quarry Dust",
+  "West Pokot Sand",
+  "River Sand",
+  "Machine Blocks 6x9",
+  "Machine Blocks 9x9",
+  "Foundation Stones",
+  "Hardcore",
+  "Murram",
+  "Quarry Waste",
 ];

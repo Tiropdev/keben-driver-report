@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
-import { ReportHistory } from "@/components/ReportHistory";
+
 const queryClient = new QueryClient();
 
 const App = () => {
@@ -16,15 +16,12 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-<Routes>
-  <Route path="/" element={<Index />} />
-  <Route path="/reports" element={<Reports />} />
-  <Route path="/history" element={<ReportHistory />} /> {/* ✅ Added this */}
-  
-  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-  <Route path="*" element={<NotFound />} />
-</Routes>
-
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/reports" element={<Reports />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
