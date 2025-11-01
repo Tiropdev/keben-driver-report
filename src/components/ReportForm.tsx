@@ -269,7 +269,7 @@ export const ReportForm = () => {
             {showAmountField && (
               <div className="space-y-2">
                 <Label>
-                  Amount {getUnit(selectedMaterial) ? `(${getUnit(selectedMaterial)})` : ""}
+                  QUANTITY {getUnit(selectedMaterial) ? `(${getUnit(selectedMaterial)})` : ""}
                 </Label>
                 <Input type="number" step="0.01" {...register("amount")} placeholder="Enter amount" className="h-12" />
                 {errors.amount && <p className="text-sm text-destructive">{errors.amount.message}</p>}
@@ -311,7 +311,7 @@ export const ReportForm = () => {
             <Input type="number" {...register("allowance")} placeholder="0.0" className="h-12" />
           </div>
           <div className="space-y-2">
-            <Label>FUEL (Ltrs)</Label>
+            <Label>FUEL PER DAY(Ltrs)</Label>
             <Input type="number" {...register("fuel")} placeholder="0.0" className="h-12" />
           </div>
           </div>
