@@ -24,3 +24,4 @@ dist-ssr
 *.sw?
 scripts/credentials.json
 scripts/credentials.json
+scripts/credentials.json
