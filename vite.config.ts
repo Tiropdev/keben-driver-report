@@ -23,18 +23,19 @@ export default defineConfig(({ mode }) => ({
         theme_color: "#2D5016",
         background_color: "#FAFAFA",
         display: "standalone",
-        icons: [
-          {
-            src: "/placeholder.svg",
-            sizes: "192x192",
-            type: "image/svg+xml",
-          },
-          {
-            src: "/placeholder.svg",
-            sizes: "512x512",
-            type: "image/svg+xml",
-          },
-        ],
+icons: [
+  {
+    src: "/icon-192x192.png",
+    sizes: "192x192",
+    type: "image/png",
+  },
+  {
+    src: "/icon-512x512.png",
+    sizes: "512x512",
+    type: "image/png",
+  },
+],
+
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg}"],

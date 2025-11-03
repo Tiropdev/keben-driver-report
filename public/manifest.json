@@ -1,18 +1,21 @@
 {
   "name": "Keben Driver Report",
-  "short_name": "DriverReport",
+  "short_name": "Keben Report",
+  "description": "Delivery report management for Keben Hardware drivers",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#006400",
+  "background_color": "#FAFAFA",
+  "theme_color": "#2D5016",
+  "lang": "en",
+  "scope": "/",
   "icons": [
     {
-      "src": "/web-app-manifest-192x192.png",
+      "src": "/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/web-app-manifest-512x512.png",
+      "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     }

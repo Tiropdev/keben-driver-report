@@ -331,7 +331,7 @@ export const ReportForm = () => {
           <div className="flex items-start space-x-3 pt-4">
             <Checkbox checked={watch("confirmed")} onCheckedChange={(c) => setValue("confirmed", c as boolean)} />
             <Label className="text-sm font-normal leading-relaxed cursor-pointer">
-              I COMFIRM THAT THE ABOVE REPORT IS ACCURATE
+              I CONFIRM THAT THE ABOVE REPORT IS ACCURATE
             </Label>
           </div>
           {errors.confirmed && <p className="text-sm text-destructive">{errors.confirmed.message}</p>}
