@@ -26,6 +26,7 @@ import { saveReport } from "@/lib/storage";
 
 const ALL_MATERIALS = [
   "Ballast 1/2",
+  "Ballast 1/4",
   "Ballast 3/4",
   "Mixed Ballast",
   "Quarry Sand",
@@ -65,6 +66,7 @@ const formSchema = z.object({
   fuel: z.coerce.number().min(0, "Must be positive"),
   distance: z.coerce.number().min(0, "Must be positive"),
   amountPaid: z.coerce.number().min(0, "Must be positive"),
+  deliveryDate: z.string().min(1, "Please select date"), // ⭐ ADDED
   confirmed: z.boolean().refine((val) => val === true, "Confirm report accuracy"),
 });
 
@@ -97,7 +99,6 @@ export const ReportForm = () => {
 
   const selectedMaterial = watch("material");
 
-  // show amount for foundation, machine blocks (6x9/9x9) and Other
   const showAmountField =
     selectedMaterial &&
     (
@@ -110,32 +111,28 @@ export const ReportForm = () => {
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
-      // amountValue: keep null if user didn't provide an amount
       const amountValue =
         typeof data.amount === "number" && !Number.isNaN(data.amount)
           ? data.amount
           : null;
 
-      // tripsValue: keep null if not provided
       const tripsValue =
         typeof data.trips === "number" && !Number.isNaN(data.trips)
           ? data.trips
           : null;
 
-      // materialName: plain text only (if Other, take typed otherMaterial)
       const materialName =
         data.material === "Other"
           ? (data.otherMaterial?.trim() || "Other")
           : data.material;
 
-      // local report (keeps amount & trips separate)
       const localReport = {
         id: `report_${Date.now()}`,
         driverName: data.driverName,
         truckNumber: data.truckNumber,
         from: data.from,
         to: data.to,
-        material: materialName, // plain text
+        material: materialName,
         amount: amountValue,
         trips: tripsValue,
         purchaseCost: data.purchaseCost,
@@ -144,12 +141,12 @@ export const ReportForm = () => {
         fuel: data.fuel,
         distance: data.distance,
         amountPaid: data.amountPaid,
+        deliveryDate: data.deliveryDate, // ⭐ ADDED
         timestamp: new Date().toISOString(),
       };
 
       saveReport(localReport);
 
-      // payload: material, amount, trips are separate columns (no pipes)
       const payload: Record<string, any> = {
         driver_name: data.driverName,
         truck_number: data.truckNumber,
@@ -164,6 +161,7 @@ export const ReportForm = () => {
         fuel_per_day: data.fuel,
         distance: data.distance,
         amount_paid: data.amountPaid,
+        delivery_date: data.deliveryDate, // ⭐ ADDED
         created_at: new Date().toISOString(),
       };
 
@@ -193,7 +191,6 @@ export const ReportForm = () => {
     }
   };
 
-  // helper to know whether the next material requires amount (used when switching selection)
   const materialRequiresAmount = (val: string) =>
     val &&
     (
@@ -214,6 +211,7 @@ export const ReportForm = () => {
 
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+
           {/* Driver Info */}
           <div className="space-y-2">
             <Label>DRIVER NAME</Label>
@@ -227,20 +225,25 @@ export const ReportForm = () => {
             {errors.truckNumber && <p className="text-sm text-destructive">{errors.truckNumber.message}</p>}
           </div>
 
+          {/* ⭐ DATE PICKER */}
+          <div className="space-y-2">
+            <Label>DATE OF DELIVERY</Label>
+            <Input type="date" {...register("deliveryDate")} className="h-12" />
+            {errors.deliveryDate && (
+              <p className="text-sm text-destructive">{errors.deliveryDate.message}</p>
+            )}
+          </div>
+
           {/* Material */}
           <div className="space-y-2">
             <Label>MATERIALS</Label>
             <Select
               value={selectedMaterial || ""}
               onValueChange={(val) => {
-                // set the selected material
                 setValue("material", val);
-
-                // only clear amount if the newly selected material does NOT require amount
                 if (!materialRequiresAmount(val)) {
                   setValue("amount", undefined);
                 }
-                // keep amount if selecting Other or machine/foundation so driver doesn't lose typed value
               }}
             >
               <SelectTrigger className="h-12">
@@ -307,13 +310,13 @@ export const ReportForm = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-            <Label>ALLOWANCE(KES)</Label>
-            <Input type="number" {...register("allowance")} placeholder="0.0" className="h-12" />
-          </div>
-          <div className="space-y-2">
-            <Label>FUEL PER DAY(Ltrs)</Label>
-            <Input type="number" {...register("fuel")} placeholder="0.0" className="h-12" />
-          </div>
+              <Label>ALLOWANCE(KES)</Label>
+              <Input type="number" {...register("allowance")} placeholder="0.0" className="h-12" />
+            </div>
+            <div className="space-y-2">
+              <Label>FUEL PER DAY(Ltrs)</Label>
+              <Input type="number" {...register("fuel")} placeholder="0.0" className="h-12" />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
