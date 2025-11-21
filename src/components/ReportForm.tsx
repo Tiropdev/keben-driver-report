@@ -42,13 +42,18 @@ const ALL_MATERIALS = [
   "Other",
 ];
 
+// ⭐ UPDATED UNIT LOGIC — FINAL VERSION
 const getUnit = (material?: string) => {
   if (!material) return "";
   const m = material.toLowerCase();
-  if (m.includes("foundation")) return "ft";
-  if (m.includes("machine block") || m.includes("6x9") || m.includes("9x9"))
+
+  // Machine blocks & foundation stones → pieces
+  if (m.includes("6x9") || m.includes("9x9") || m.includes("foundation")) {
     return "pieces";
-  return "";
+  }
+
+  // ALL remaining → tonnes
+  return "tonnes";
 };
 
 const formSchema = z.object({
@@ -58,7 +63,7 @@ const formSchema = z.object({
   to: z.string().trim().min(1, "Destination is required").max(100),
   material: z.string().min(1, "Please select a material"),
   otherMaterial: z.string().optional(),
-  amount: z.coerce.number().optional(),
+  amount: z.coerce.number().min(0, "Must be positive"),
   trips: z.coerce.number().optional(),
   purchaseCost: z.coerce.number().min(0, "Must be positive"),
   cess: z.coerce.number().min(0, "Must be positive"),
@@ -66,7 +71,7 @@ const formSchema = z.object({
   fuel: z.coerce.number().min(0, "Must be positive"),
   distance: z.coerce.number().min(0, "Must be positive"),
   amountPaid: z.coerce.number().min(0, "Must be positive"),
-  deliveryDate: z.string().min(1, "Please select date"), // ⭐ ADDED
+  deliveryDate: z.string().min(1, "Please select date"),
   confirmed: z.boolean().refine((val) => val === true, "Confirm report accuracy"),
 });
 
@@ -99,28 +104,12 @@ export const ReportForm = () => {
 
   const selectedMaterial = watch("material");
 
-  const showAmountField =
-    selectedMaterial &&
-    (
-      selectedMaterial.toLowerCase().includes("foundation") ||
-      selectedMaterial.toLowerCase().includes("6x9") ||
-      selectedMaterial.toLowerCase().includes("9x9") ||
-      selectedMaterial === "Other"
-    );
+  // ⭐ FINAL LOGIC — amount field ALWAYS visible for ANY material
+  const showAmountField = Boolean(selectedMaterial);
 
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
-      const amountValue =
-        typeof data.amount === "number" && !Number.isNaN(data.amount)
-          ? data.amount
-          : null;
-
-      const tripsValue =
-        typeof data.trips === "number" && !Number.isNaN(data.trips)
-          ? data.trips
-          : null;
-
       const materialName =
         data.material === "Other"
           ? (data.otherMaterial?.trim() || "Other")
@@ -133,35 +122,35 @@ export const ReportForm = () => {
         from: data.from,
         to: data.to,
         material: materialName,
-        amount: amountValue,
-        trips: tripsValue,
+        amount: data.amount,
+        trips: data.trips || null,
         purchaseCost: data.purchaseCost,
         cess: data.cess,
         allowance: data.allowance,
         fuel: data.fuel,
         distance: data.distance,
         amountPaid: data.amountPaid,
-        deliveryDate: data.deliveryDate, // ⭐ ADDED
+        deliveryDate: data.deliveryDate,
         timestamp: new Date().toISOString(),
       };
 
       saveReport(localReport);
 
-      const payload: Record<string, any> = {
+      const payload = {
         driver_name: data.driverName,
         truck_number: data.truckNumber,
         from_location: data.from,
         to_location: data.to,
         material: materialName,
-        amount: amountValue,
-        trips: tripsValue,
+        amount: data.amount,
+        trips: data.trips || null,
         purchase_cost: data.purchaseCost,
         cess: data.cess,
         allowance: data.allowance,
         fuel_per_day: data.fuel,
         distance: data.distance,
         amount_paid: data.amountPaid,
-        delivery_date: data.deliveryDate, // ⭐ ADDED
+        delivery_date: data.deliveryDate,
         created_at: new Date().toISOString(),
       };
 
@@ -191,15 +180,6 @@ export const ReportForm = () => {
     }
   };
 
-  const materialRequiresAmount = (val: string) =>
-    val &&
-    (
-      val.toLowerCase().includes("foundation") ||
-      val.toLowerCase().includes("6x9") ||
-      val.toLowerCase().includes("9x9") ||
-      val === "Other"
-    );
-
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader className="bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-t-lg">
@@ -225,13 +205,11 @@ export const ReportForm = () => {
             {errors.truckNumber && <p className="text-sm text-destructive">{errors.truckNumber.message}</p>}
           </div>
 
-          {/* ⭐ DATE PICKER */}
+          {/* Date */}
           <div className="space-y-2">
             <Label>DATE OF DELIVERY</Label>
             <Input type="date" {...register("deliveryDate")} className="h-12" />
-            {errors.deliveryDate && (
-              <p className="text-sm text-destructive">{errors.deliveryDate.message}</p>
-            )}
+            {errors.deliveryDate && <p className="text-sm text-destructive">{errors.deliveryDate.message}</p>}
           </div>
 
           {/* Material */}
@@ -241,9 +219,6 @@ export const ReportForm = () => {
               value={selectedMaterial || ""}
               onValueChange={(val) => {
                 setValue("material", val);
-                if (!materialRequiresAmount(val)) {
-                  setValue("amount", undefined);
-                }
               }}
             >
               <SelectTrigger className="h-12">
@@ -271,13 +246,18 @@ export const ReportForm = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {showAmountField && (
               <div className="space-y-2">
-                <Label>
-                  QUANTITY {getUnit(selectedMaterial) ? `(${getUnit(selectedMaterial)})` : ""}
-                </Label>
-                <Input type="number" step="0.01" {...register("amount")} placeholder="Enter amount" className="h-12" />
+                <Label>QUANTITY ({getUnit(selectedMaterial)})</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  {...register("amount")}
+                  placeholder="Enter amount"
+                  className="h-12"
+                />
                 {errors.amount && <p className="text-sm text-destructive">{errors.amount.message}</p>}
               </div>
             )}
+
             <div className="space-y-2">
               <Label>Trips (optional)</Label>
               <Input type="number" step="1" {...register("trips")} placeholder="e.g. 2" className="h-12" />
@@ -332,12 +312,17 @@ export const ReportForm = () => {
 
           {/* Confirm */}
           <div className="flex items-start space-x-3 pt-4">
-            <Checkbox checked={watch("confirmed")} onCheckedChange={(c) => setValue("confirmed", c as boolean)} />
+            <Checkbox
+              checked={watch("confirmed")}
+              onCheckedChange={(c) => setValue("confirmed", c as boolean)}
+            />
             <Label className="text-sm font-normal leading-relaxed cursor-pointer">
               I CONFIRM THAT THE ABOVE REPORT IS ACCURATE
             </Label>
           </div>
-          {errors.confirmed && <p className="text-sm text-destructive">{errors.confirmed.message}</p>}
+          {errors.confirmed && (
+            <p className="text-sm text-destructive">{errors.confirmed.message}</p>
+          )}
 
           <Button type="submit" className="w-full h-12 text-base" disabled={isSubmitting}>
             {isSubmitting ? (
